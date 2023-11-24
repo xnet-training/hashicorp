@@ -1,0 +1,61 @@
+version: "3.7"
+
+networks:
+  service-mesh:
+
+volumes:
+  consul-data:
+  consul-client-data:
+
+services:
+  #
+  ## Vault Service
+  #
+  vault:
+    image: vault:${VAULT_VERSION:-1.13.3}
+    ports:
+    - "8200:8200"
+    cap_add:
+    - IPC_LOCK
+    networks:
+    - service-mesh
+    environment:
+    #  VAULT_DEV_ROOT_TOKEN_ID: root
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    volumes:
+    - "./vault:/vault/config"
+    command: server -dev -config /vault/config/config.hcl
+  #
+  ## Service Mesh
+  #
+  consul:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+    restart: always
+    volumes:
+    - "./consul:/consul/config"
+    - "consul-data:/consul/data"
+    #- "./hashicorp/certs/:/consul/config/certs/:ro"
+    networks:
+    - service-mesh
+    ports:
+    - "8500:8500"
+    - "8600:8600/tcp"
+    - "8600:8600/udp"
+    - "8300:8300"
+    #command:
+    #- agent 
+    #- -bootstrap-expect=1
+    #- -config-file=/consul/config/config.hcl
+  #
+  ## Service Mesh
+  #
+  consul-client:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+    restart: always
+    volumes:
+    - "./consul-client:/consul/config"
+    - "consul-client-data:/consul/data"
+    #- "./hashicorp/certs:/consul/config/certs/:ro"
+    networks:
+    - service-mesh
+    command: "agent -config-file=/consul/config/client.hcl"
