@@ -1,53 +1,69 @@
 version: '3.7'
 
+x-consul: &consul
+  image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+  restart: always
+  networks:
+  - consul
+
 services:
+  traefik:
+    image: traefik:${TRAEFIK_VERSION:-v2.10}
+    command:
+    - "--log.level=DEBUG"
+    - "--api.insecure=true"
+    - "--providers.docker=true"
+    - "--providers.docker.exposedbydefault=false"
+    - "--entrypoints.web.address=:80"
+    - "--api.dashboard=true"
+    - "--api=true"
+    #- "--providers.consul.endpoints=consul-server-1:8500"
+    ports:
+    - "80:80"
+    - "8080:8080"
+    volumes:
+    - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    networks:
+    - consul
   #
   ##
   #
   consul-server-1:
-    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
-    container_name: consul-server1
-    restart: always
+    <<: *consul
     volumes:
     - "consul-data-1:/consul/data:Z"
-    - "./consul/consul-server-1.hcl:/config/config.hcl:ro"
-    networks:
-    - consul
+    - "./consul/consul-server.hcl:/config/config.hcl:ro"
+    command: "agent -config-file=/config/config.hcl"
     ports:
     - "8500:8500"
     - "8600:8600/tcp"
     - "8600:8600/udp"
-    command: "agent -config-file=/config/config.hcl"
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.consul-server-1.rule=Host(`consul.local.gd`)
+    - traefik.http.services.consul-server-1.loadbalancer.server.port=8500
 
   consul-server-2:
-    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
-    container_name: consul-server2
-    restart: always
+    <<: *consul
+    command: "agent -config-file=/config/config.hcl -join consul-server-1"
     volumes:
     - "consul-data-2:/consul/data:Z"
-    - "./consul/consul-server-2.hcl:/config/config.hcl:ro"
-    networks:
-    - consul
-    #ports:
-    #- "8500:8500"
-    #- "8600:8600/tcp"
-    #- "8600:8600/udp"
-    command: "agent -config-file=/config/config.hcl -join consul-server-1"
+    - "./consul/consul-server.hcl:/config/config.hcl:ro"
 
   consul-server-3:
-    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
-    container_name: consul-server3
-    restart: always
+    <<: *consul
+    command: "agent -config-file=/config/config.hcl -join consul-server-1"
     volumes:
     - "consul-data-3:/consul/data:Z"
-    - "./consul/consul-server-3.hcl:/config/config.hcl:ro"
-    networks:
-    - consul
-    #ports:
-    #- "8500:8500"
-    #- "8600:8600/tcp"
-    #- "8600:8600/udp"
-    command: "agent -config-file=/config/config.hcl -join consul-server-1"
+    - "./consul/consul-server.hcl:/config/config.hcl:ro"
+
+  #whoami:
+  #  image: "traefik/whoami"
+  #  container_name: "simple-service"
+  #  labels:
+  #    - "traefik.enable=true"
+  #    - "traefik.http.routers.whoami1.rule=Host(`whoami.demostrativo.com`)"
+  #    - "traefik.http.routers.whoami1.entrypoints=web"
 
   #consul-server-2:
   #  image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
