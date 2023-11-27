@@ -1,0 +1,94 @@
+version: '3.7'
+
+services:
+  #
+  ##
+  #
+  consul-server-1:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+    container_name: consul-server1
+    restart: always
+    volumes:
+    - "consul-data-1:/consul/data:Z"
+    - "./consul/consul-server-1.hcl:/config/config.hcl:ro"
+    networks:
+    - consul
+    ports:
+    - "8500:8500"
+    - "8600:8600/tcp"
+    - "8600:8600/udp"
+    command: "agent -config-file=/config/config.hcl"
+
+  consul-server-2:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+    container_name: consul-server2
+    restart: always
+    volumes:
+    - "consul-data-2:/consul/data:Z"
+    - "./consul/consul-server-2.hcl:/config/config.hcl:ro"
+    networks:
+    - consul
+    #ports:
+    #- "8500:8500"
+    #- "8600:8600/tcp"
+    #- "8600:8600/udp"
+    command: "agent -config-file=/config/config.hcl -join consul-server-1"
+
+  consul-server-3:
+    image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+    container_name: consul-server3
+    restart: always
+    volumes:
+    - "consul-data-3:/consul/data:Z"
+    - "./consul/consul-server-3.hcl:/config/config.hcl:ro"
+    networks:
+    - consul
+    #ports:
+    #- "8500:8500"
+    #- "8600:8600/tcp"
+    #- "8600:8600/udp"
+    command: "agent -config-file=/config/config.hcl -join consul-server-1"
+
+  #consul-server-2:
+  #  image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+  #  container_name: consul-server2
+  #  restart: always
+  #  volumes:
+  #  #- ./server2.json:/consul/config/server.json:ro
+  #  - ./certs/:/consul/config/certs/:ro
+  #  networks:
+  #  - consul
+  #  command: "agent -bootstrap-expect=3"
+  #
+  #consul-server-3:
+  #  image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+  #  container_name: consul-server3
+  #  restart: always
+  #  volumes:
+  #  #- ./server3.json:/consul/config/server.json:ro
+  #  - ./certs/:/consul/config/certs/:ro
+  #  networks:
+  #  - consul
+  #  command: "agent -bootstrap-expect=3"
+  #
+  ##
+  #
+  #consul-client:
+  #  image: hashicorp/consul:${CONSUL_VERSION:-1.11.2}
+  #  container_name: consul-client
+  #  restart: always
+  #  volumes:
+  #  - ./client.json:/consul/config/client.json:ro
+  #  - ./certs/:/consul/config/certs/:ro
+  #  networks:
+  #    - consul
+  #  command: "agent"
+
+networks:
+  consul:
+    driver: bridge
+
+volumes:
+  consul-data-1:
+  consul-data-2:
+  consul-data-3:
